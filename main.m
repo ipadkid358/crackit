@@ -1,11 +1,3 @@
-//
-//  main.m
-//  crackit
-//
-//  Created by ipad_kid on 8/12/17.
-//  Copyright © 2017 BlackJacket. All rights reserved.
-//
-
 #import <Foundation/Foundation.h>
 
 int main(int argc, const char * argv[]) {
@@ -15,15 +7,14 @@ int main(int argc, const char * argv[]) {
         
         if (argv[3] || !(possibilities && numberOfThreads)) {
             printf("Usage: %s <possibilities> <threads>\n", argv[0]);
-            exit(-1);
+            return 0;
         }
         
         double timeMulti = 100000;
         unsigned long execPer = possibilities/numberOfThreads;
         __block CFRunLoopRef runLoop = CFRunLoopGetCurrent();
         __block int numberOfExecutions = 0;
-        
-        NSUInteger startTime = llrint([NSDate.date timeIntervalSince1970] * timeMulti);
+        NSUInteger startTime = llrint(NSDate.date.timeIntervalSince1970 * timeMulti);
         
         for (int increment = 0; increment < numberOfThreads; increment++) {
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
@@ -39,11 +30,25 @@ int main(int argc, const char * argv[]) {
         }
         CFRunLoopRun();
         
-        NSUInteger endTime = llrint([NSDate.date timeIntervalSince1970] * timeMulti);
+        unsigned long fixMod = execPer*numberOfThreads;
+        while (fixMod < possibilities) fixMod++;
+        NSUInteger endTime = llrint(NSDate.date.timeIntervalSince1970 * timeMulti);
+        
+        NSString *formatNumber = [NSString stringWithFormat:@"%lu", fixMod];
+        NSUInteger numLength = formatNumber.length;
+        NSUInteger firstDigits = numLength%3;
+        NSMutableString *spaced = NSMutableString.new;
+        if (firstDigits) [spaced appendFormat:@" %@", [formatNumber substringToIndex:firstDigits]];
+        formatNumber = [formatNumber substringFromIndex:firstDigits];
+        while (numLength) {
+            [spaced appendFormat:@" %@", [formatNumber substringToIndex:3]];
+            formatNumber = [formatNumber substringFromIndex:3];
+            numLength = formatNumber.length;
+        }
+        
         NSUInteger totalTime = endTime-startTime;
-        printf("Finished adding from 0 to %lu on %d threads in %f milliseconds (%f seconds)\n",
-               execPer*numberOfThreads, numberOfThreads, totalTime/100.0, totalTime/timeMulti);
+        printf("Finished adding from 0 to%s on %d threads in %f milliseconds (%f seconds)\n", spaced.UTF8String, numberOfThreads, totalTime/100.0, totalTime/timeMulti);
     }
     
-    return 0;
+    return 1;
 }
