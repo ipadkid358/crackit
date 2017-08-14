@@ -1,53 +1,54 @@
 #import <Foundation/Foundation.h>
+#include <sys/sysctl.h>
 
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
-        unsigned long possibilities = [NSString stringWithFormat:@"%s", argv[1]].longLongValue;
-        __block int numberOfThreads = [NSString stringWithFormat:@"%s", argv[2]].intValue;
+        unsigned long long possibilities = [NSString stringWithFormat:@"%s", argv[1]].longLongValue;
+        int argTwo = [NSString stringWithFormat:@"%s", argv[2]].intValue;
         
-        if (argv[3] || !(possibilities && numberOfThreads)) {
-            printf("Usage: %s <possibilities> <threads>\n", argv[0]);
+        int argBreak = 3;
+        unsigned int numberOfThreads;
+        if (argTwo) numberOfThreads = argTwo;
+        else {
+            size_t len = sizeof(numberOfThreads);
+            sysctlbyname("hw.ncpu", &numberOfThreads, &len, NULL, 0);
+            argBreak--;
+        }
+        
+        if (argv[argBreak] || !(possibilities)) {
+            printf("Usage: %s <possibilities> [threads]\n"
+                   "    'threads' defaults to the amount of machine cores\n", argv[0]);
             return 0;
         }
         
-        double timeMulti = 100000;
-        unsigned long execPer = possibilities/numberOfThreads;
+        unsigned long long execPer = possibilities/numberOfThreads;
         __block CFRunLoopRef runLoop = CFRunLoopGetCurrent();
         __block int numberOfExecutions = 0;
-        NSUInteger startTime = llrint(NSDate.date.timeIntervalSince1970 * timeMulti);
-        
+        NSDate *startTime = NSDate.date;
         for (int increment = 0; increment < numberOfThreads; increment++) {
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
-                unsigned long counter = 0;
-                while (counter < execPer) counter++;
+                unsigned long long counter = 0;
+                while (counter < execPer) {
+                    counter++;
+                }
                 
                 dispatch_async(dispatch_get_main_queue(), ^(void) {
                     numberOfExecutions++;
                     if (numberOfExecutions == numberOfThreads) CFRunLoopStop(runLoop);
                 });
-                
             });
         }
         CFRunLoopRun();
         
-        unsigned long fixMod = execPer*numberOfThreads;
+        unsigned long long fixMod = execPer*numberOfThreads;
         while (fixMod < possibilities) fixMod++;
-        NSUInteger endTime = llrint(NSDate.date.timeIntervalSince1970 * timeMulti);
+        NSDate *endTime = NSDate.date;
         
-        NSString *formatNumber = [NSString stringWithFormat:@"%lu", fixMod];
-        NSUInteger numLength = formatNumber.length;
-        NSUInteger firstDigits = numLength%3;
-        NSMutableString *spaced = NSMutableString.new;
-        if (firstDigits) [spaced appendFormat:@" %@", [formatNumber substringToIndex:firstDigits]];
-        formatNumber = [formatNumber substringFromIndex:firstDigits];
-        while (numLength) {
-            [spaced appendFormat:@" %@", [formatNumber substringToIndex:3]];
-            formatNumber = [formatNumber substringFromIndex:3];
-            numLength = formatNumber.length;
-        }
+        NSNumber *numInt = [NSNumber numberWithUnsignedLong:fixMod];
+        NSString *spaced = [NSNumberFormatter localizedStringFromNumber:numInt numberStyle:NSNumberFormatterDecimalStyle];
         
-        NSUInteger totalTime = endTime-startTime;
-        printf("Finished adding from 0 to%s on %d threads in %f milliseconds (%f seconds)\n", spaced.UTF8String, numberOfThreads, totalTime/100.0, totalTime/timeMulti);
+        NSTimeInterval totalTime = [endTime timeIntervalSinceDate:startTime];
+        printf("Finished counting from 0 to %s on %d threads in %f milliseconds (%f seconds)\n", spaced.UTF8String, numberOfThreads, totalTime*1000, totalTime);
     }
     
     return 1;
