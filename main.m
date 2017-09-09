@@ -4,12 +4,10 @@
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
         unsigned long long possibilities = [NSString stringWithFormat:@"%s", argv[1]].longLongValue;
-        int argTwo = [NSString stringWithFormat:@"%s", argv[2]].intValue;
+        unsigned int numberOfThreads = [NSString stringWithFormat:@"%s", argv[2]].intValue;
         
         int argBreak = 3;
-        unsigned int numberOfThreads;
-        if (argTwo) numberOfThreads = argTwo;
-        else {
+        if (!numberOfThreads) {
             size_t len = sizeof(numberOfThreads);
             sysctlbyname("hw.ncpu", &numberOfThreads, &len, NULL, 0);
             argBreak--;
@@ -22,17 +20,16 @@ int main(int argc, const char * argv[]) {
         }
         
         unsigned long long execPer = possibilities/numberOfThreads;
-        __block CFRunLoopRef runLoop = CFRunLoopGetCurrent();
         __block int numberOfExecutions = 0;
+        CFRunLoopRef runLoop = CFRunLoopGetCurrent();
         NSDate *startTime = NSDate.date;
+        
         for (int increment = 0; increment < numberOfThreads; increment++) {
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void) {
+            dispatch_async(dispatch_get_global_queue(0, 0), ^{
                 unsigned long long counter = 0;
-                while (counter < execPer) {
-                    counter++;
-                }
+                while (counter < execPer) counter++;
                 
-                dispatch_async(dispatch_get_main_queue(), ^(void) {
+                dispatch_async(dispatch_get_main_queue(), ^{
                     numberOfExecutions++;
                     if (numberOfExecutions == numberOfThreads) CFRunLoopStop(runLoop);
                 });
