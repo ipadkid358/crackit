@@ -2,7 +2,9 @@
 
 Originating from the "brute force" bash script I wrote, crackit times how long it takes your CPU to count up to a number on a specified amount of threads
 
-Implementation of [BJThreadedCounting](https://github.com/ipadkid358/BJThreadedCounting) (didn’t feel like re-compiling the C library to include)
+If a macOS SDK is available, `make MACOS=1` to build for macOS 32 and 64 bit
+
+`./make-all.sh` will build for iOS and macOS, 32 and 64 bit, and create one FAT (universal) binary
 
 ```
 Usage: ./crackit <possibilities> [threads]
