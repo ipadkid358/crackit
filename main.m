@@ -1,5 +1,5 @@
 #import <Foundation/Foundation.h>
-#include <sys/sysctl.h>
+#import <sys/sysctl.h>
 
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
@@ -16,6 +16,7 @@ int main(int argc, const char *argv[]) {
             numberOfThreads = [[NSString stringWithUTF8String:argTwo] intValue];
         }
         
+        // if the numberOfThreads arg was not provided, set it to the number of device cores
         if (!numberOfThreads) {
             size_t len = sizeof(numberOfThreads);
             sysctlbyname("hw.ncpu", &numberOfThreads, &len, NULL, 0);
@@ -24,7 +25,7 @@ int main(int argc, const char *argv[]) {
         if ((argc > 3) || !possibilities) {
             printf("Usage: %s <possibilities> [threads]\n"
                    "    'threads' defaults to the amount of machine cores\n", argv[0]);
-            return 0;
+            return 1;
         }
         
         unsigned long long execPer = possibilities/numberOfThreads;
@@ -33,15 +34,20 @@ int main(int argc, const char *argv[]) {
         CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
         
         for (int increment = 0; increment < numberOfThreads; increment++) {
+            // for each numberOfThreads, kick off a new background thread
             dispatch_async(dispatch_get_global_queue(0, 0), ^{
-                volatile unsigned long long counter = 0;
-                while (counter < execPer) {
-                    counter++;
+                volatile unsigned long long counter = execPer;
+                // this should be the lightest weight on the CPU
+                while (counter) {
+                    counter--;
                 }
                 
+                // keep track of how many times this is finished on the main thread
                 dispatch_async(dispatch_get_main_queue(), ^{
                     numberOfExecutions++;
+                    // and when it's done, stop the runloop
                     if (numberOfExecutions == numberOfThreads) {
+                        // once RunLoopStop is called, the code after RunLoopRun is executed
                         CFRunLoopStop(runLoop);
                     }
                 });
@@ -49,18 +55,28 @@ int main(int argc, const char *argv[]) {
         }
         CFRunLoopRun();
         
+        // fix any remainders caused by the original mod operation
         unsigned long long fixMod = execPer*numberOfThreads;
         while (fixMod < possibilities) {
             fixMod++;
         }
         
+        // make sure that we get this time as soon as possible
         CFAbsoluteTime endTime = CFAbsoluteTimeGetCurrent();
         
-        NSString *spaced = [NSNumberFormatter localizedStringFromNumber:[NSNumber numberWithUnsignedLongLong:fixMod] numberStyle:NSNumberFormatterDecimalStyle];
-        
         CFTimeInterval totalTime = endTime-startTime;
-        printf("Finished counting from 0 to %s on %d threads in %f milliseconds (%f seconds)\n", spaced.UTF8String, numberOfThreads, totalTime*1000, totalTime);
+        
+        printf("Count to:  %s\n"
+               "Threads:   %d\n"
+               "Millisecs: %f\n"
+               "Seconds:   %f\n"
+               "Per sec:   %s\n",
+               [[NSNumberFormatter localizedStringFromNumber:[NSNumber numberWithUnsignedLongLong:fixMod] numberStyle:NSNumberFormatterDecimalStyle] UTF8String],
+               numberOfThreads,
+               totalTime*1000,
+               totalTime,
+               [[NSNumberFormatter localizedStringFromNumber:[NSNumber numberWithDouble:fixMod/totalTime] numberStyle:NSNumberFormatterDecimalStyle] UTF8String]);
     }
     
-    return 1;
+    return 0;
 }
