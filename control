@@ -1,0 +1,8 @@
+Package: com.ipadkid.crackit
+Name: Crack It
+Architecture: iphoneos-arm
+Description: Fast command line tool to count up to a number on multiple threads. Fun for finding out how fast your device could theoretically "crack" a passcode
+Maintainer: ipad_kid <ipadkid358@gmail.com>
+Author: ipad_kid <ipadkid358@gmail.com>
+Section: Utilities
+Version: 0.0.1

@@ -1,6 +1,8 @@
 #import <Foundation/Foundation.h>
 #import <sys/sysctl.h>
 
+#define fastNumberToChar(n) [[NSNumberFormatter localizedStringFromNumber:(n) numberStyle:NSNumberFormatterDecimalStyle] UTF8String]
+
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         const char *argOne = argv[1];
@@ -71,11 +73,11 @@ int main(int argc, const char *argv[]) {
                "Millisecs: %f\n"
                "Seconds:   %f\n"
                "Per sec:   %s\n",
-               [[NSNumberFormatter localizedStringFromNumber:[NSNumber numberWithUnsignedLongLong:fixMod] numberStyle:NSNumberFormatterDecimalStyle] UTF8String],
+               fastNumberToChar([NSNumber numberWithUnsignedLongLong:fixMod]),
                numberOfThreads,
                totalTime*1000,
                totalTime,
-               [[NSNumberFormatter localizedStringFromNumber:[NSNumber numberWithDouble:fixMod/totalTime] numberStyle:NSNumberFormatterDecimalStyle] UTF8String]);
+               fastNumberToChar([NSNumber numberWithDouble:fixMod/totalTime]));
     }
     
     return 0;

@@ -10,5 +10,3 @@ If a macOS SDK is available, `make MACOS=1` to build for macOS 32 and 64 bit
 Usage: ./crackit <possibilities> [threads]
     'threads' defaults to the amount of machine cores
 ```
-
-[Binary](http://ipadkid.cf/scripts/crackit) (compiled tool) available on my website
