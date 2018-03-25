@@ -9,7 +9,6 @@ endif
 include $(THEOS)/makefiles/common.mk
 
 TOOL_NAME = crackit
-crackit_FILES = main.m
-crackit_CFLAGS = -fobjc-arc
+crackit_FILES = crackit.c
 
 include $(THEOS_MAKE_PATH)/tool.mk
