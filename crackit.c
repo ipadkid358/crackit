@@ -3,7 +3,9 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <math.h>
+#include <sys/time.h>
 
+// function referenced by pthread_create to execute on background thread
 void *eachCountTo(volatile unsigned long long *execOn) {
     volatile unsigned long long counter = *execOn;
     while (counter) {
@@ -13,7 +15,7 @@ void *eachCountTo(volatile unsigned long long *execOn) {
 }
 
 
-/// Formats an unsigned long long to a char * using commas, caller  is responsible for freeing the return value
+/// Formats an unsigned long long to a char * using commas, caller is responsible for freeing the return value
 char *formatllu(unsigned long long n) {
     char largestllu[22];
     int fixModLen = sprintf(largestllu, "%llu", n);
@@ -42,7 +44,7 @@ char *formatllu(unsigned long long n) {
     return ret;
 }
 
-/// Formats an double to a char * using commas, caller  is responsible for freeing the return value
+/// Formats a double to a char * using commas, caller is responsible for freeing the return value
 char *formatDouble(double n) {
     double lv = floor(n);
     char largestBuff[36];
@@ -65,6 +67,13 @@ char *formatDouble(double n) {
     }
     *r = '\0';
     return ret;
+}
+
+// Thanks https://stackoverflow.com/a/7918955
+double absoluteCurrentTime() {
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    return (1.0e-6 * t.tv_usec) + t.tv_sec;
 }
 
 int main(int argc, const char *argv[]) {
@@ -93,7 +102,7 @@ int main(int argc, const char *argv[]) {
     
     // if the numberOfThreads arg was not provided, set it to the number of device cores
     if (!numberOfThreads) {
-        // Thanks: https://stackoverflow.com/a/4586471
+        // Thanks https://stackoverflow.com/a/4586471
         numberOfThreads = sysconf(_SC_NPROCESSORS_ONLN);
     }
     
@@ -106,7 +115,8 @@ int main(int argc, const char *argv[]) {
     // calculate how much to count on each thread
     unsigned long long execPer = possibilities/numberOfThreads;
     
-    clock_t startTime = clock();
+    // store the current time to calculate later
+    double startTime = absoluteCurrentTime();
     
     // create an array of threadIDs with the amount of threads to use
     pthread_t threads[numberOfThreads];
@@ -116,21 +126,23 @@ int main(int argc, const char *argv[]) {
         pthread_create(&threads[thread], NULL, (void *)eachCountTo, &execPer);
     }
     
-    // go through each of the threads and wait until it has finished
-    for (unsigned int thread = 0; thread < numberOfThreads; thread++) {
-        pthread_join(threads[thread], NULL);
-    }
-    
     // fix any remainders caused by the original mod operation
+    // executed on main thread while background threads are potentially still running
     unsigned long long fixMod = execPer*numberOfThreads;
     while (fixMod < possibilities) {
         fixMod++;
     }
     
-    // make sure that we get this time as soon as possible
-    clock_t endTime = clock();
+    // go through each of the threads and wait until they are finished
+    for (unsigned int thread = 0; thread < numberOfThreads; thread++) {
+        pthread_join(threads[thread], NULL);
+    }
     
-    double totalTime = ((double)(endTime-startTime))/CLOCKS_PER_SEC;
+    // store the time after all counting operations have finished
+    double endTime = absoluteCurrentTime();
+    
+    // this timing mechanism has been tested extensively using radare2 (?t !crackit <number>) and is reliable
+    double totalTime = endTime-startTime;
     
     printf("Count to:  %s\n"
            "Threads:   %ld\n"
