@@ -1,3 +1,9 @@
+ifndef THEOS
+CC ?= gcc
+all:
+	$(CC) -pthread crackit.c -lm -o crackit
+else
+
 ifeq ($(MACOS),1)
     ARCHS = i386 x86_64
     TARGET = macosx:clang:10.12:latest
@@ -12,3 +18,5 @@ TOOL_NAME = crackit
 crackit_FILES = crackit.c
 
 include $(THEOS_MAKE_PATH)/tool.mk
+
+endif
